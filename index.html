@@ -1,0 +1,924 @@
+<title>drC's Onto-Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: domain text on top; below, a vocabulary rail beside a reading pane; tabs switch to Compare and Basket */
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --ink: #16202a; --muted: #586474; --line: #d9dee5;
+  --accent: #0d6b66; --accent-ink: #ffffff; --accent-soft: #dcefed;
+  --chip: #e9eef4; --hit: #fff1b8; --hit-ink: #5c4500;
+  --k-overlap: #6b4fa0; --k-overlap-soft: #ece6f7; --k-comp: #0d6b66; --k-comp-soft: #dcefed; --k-step: #8a4b00; --k-step-soft: #fbe9d2;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171d; --surface: #182029; --ink: #e6ebf0; --muted: #9aa6b4; --line: #2b3642;
+  --accent: #4fc2b9; --accent-ink: #0b1a19; --accent-soft: #163633; --chip: #222c37; --hit: #4a3d10; --hit-ink: #ffe28a;
+  --k-overlap: #c3a8f0; --k-overlap-soft: #2c2440; --k-comp: #4fc2b9; --k-comp-soft: #163633; --k-step: #f0b469; --k-step-soft: #3a2b17; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #182029; --ink: #e6ebf0; --muted: #9aa6b4; --line: #2b3642;
+  --accent: #4fc2b9; --accent-ink: #0b1a19; --accent-soft: #163633; --chip: #222c37; --hit: #4a3d10; --hit-ink: #ffe28a;
+  --k-overlap: #c3a8f0; --k-overlap-soft: #2c2440; --k-comp: #4fc2b9; --k-comp-soft: #163633; --k-step: #f0b469; --k-step-soft: #3a2b17; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--f-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 22px/1.2 var(--f-display); margin: 0; text-wrap: balance; }
+h3 { font: 600 17px/1.3 var(--f-display); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.mono { font-family: var(--f-mono); }
+button { font: 600 14px/1 var(--f-body); border-radius: 8px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button:focus-visible, textarea:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.domains { display: flex; gap: 8px; flex-wrap: wrap; }
+.domains button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+textarea { width: 100%; box-sizing: border-box; min-height: 170px; resize: vertical; font: 400 15px/1.55 var(--f-body);
+  color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.found { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.hitword { font-size: 13px; background: var(--hit); color: var(--hit-ink); padding: 3px 8px; border-radius: 4px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 12px 14px 10px; font-size: 15px; color: var(--muted); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.count { font: 500 12px/1 var(--f-mono); background: var(--chip); padding: 3px 6px; border-radius: 999px; margin-left: 4px; }
+
+/* explorer */
+.explore { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; align-items: start; }
+.rail { display: grid; gap: 6px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.rail-tools { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); padding: 0 2px 4px; }
+.rail-tools label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.vbtn { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; text-align: left; padding: 10px 12px; font-weight: 400; }
+.vbtn .pfx { font: 500 13px/1.2 var(--f-mono); color: var(--accent); }
+.vbtn .nm { font-size: 14px; color: var(--muted); grid-column: 1; line-height: 1.3; }
+.vbtn .n { grid-row: 1 / 3; grid-column: 2; align-self: center; font: 500 12px/1 var(--f-mono); padding: 4px 7px; border-radius: 999px; background: var(--chip); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vbtn .n.on { background: var(--hit); color: var(--hit-ink); }
+.vbtn[aria-current="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.vbtn.zero .pfx { color: var(--muted); }
+
+.detail { display: grid; gap: 18px; min-width: 0; }
+.vhead { display: grid; gap: 6px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.fit { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.fit div { background: var(--bg); border-radius: 8px; padding: 12px 14px; font-size: 15px; display: grid; gap: 4px; }
+.fit b { font: 500 12px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.terms-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.terms-head label { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.terms { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.term { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.term-name { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.term-name code { font: 500 15px/1.3 var(--f-mono); }
+.kind { font: 500 11px/1 var(--f-mono); padding: 3px 6px; border-radius: 4px; background: var(--chip); color: var(--muted); }
+.term p { font-size: 15px; grid-column: 1; }
+.term .add { grid-row: 1 / 3; grid-column: 2; align-self: start; padding: 7px 12px; font-size: 13px; }
+.term .add.in { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.term.hit { background: linear-gradient(90deg, var(--hit) 0 4px, transparent 4px); padding-left: 14px; }
+.term details { grid-column: 1 / -1; font-size: 13px; }
+.term summary { cursor: pointer; color: var(--muted); width: max-content; }
+pre { margin: 6px 0 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font: 400 13px/1.55 var(--f-mono); }
+
+.also { display: grid; gap: 10px; }
+.note { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 12px 14px; border-radius: 8px; background: var(--bg); }
+.tag { font: 500 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
+.tag.overlap { background: var(--k-overlap-soft); color: var(--k-overlap); }
+.tag.complement { background: var(--k-comp-soft); color: var(--k-comp); }
+.tag.stepup { background: var(--k-step-soft); color: var(--k-step); }
+.note .go { grid-column: 2; justify-self: start; background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; font: 600 14px/1.4 var(--f-body); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); align-items: center; }
+
+/* compare */
+.cmp-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 13px/1.3 var(--f-body); color: var(--muted); }
+td.c { width: 200px; }
+td.c strong { display: block; font-family: var(--f-display); font-size: 16px; }
+td.c span { font-size: 13px; color: var(--muted); }
+tr.need td.c { box-shadow: inset 4px 0 0 var(--accent); }
+tr.faded td { opacity: .5; }
+tr.faded:hover td, tr.faded:focus-within td { opacity: 1; }
+.need-why { display: block; margin-top: 6px; font-size: 13px; color: var(--accent); }
+.need-why .hitword { margin: 2px 2px 0 0; display: inline-block; }
+.suggest { margin-bottom: 6px; padding: 8px 10px; background: var(--accent-soft); border-radius: 6px; font-size: 14px; }
+.suggest b { font-family: var(--f-mono); font-weight: 500; }
+.opt.pick code { color: var(--accent); }
+.pickbadge { font: 500 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .05em; background: var(--accent); color: var(--accent-ink); padding: 3px 6px; border-radius: 4px; margin-left: 6px; }
+.divider td { padding: 18px 12px 6px; font: 500 12px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--line); }
+.opt { display: grid; grid-template-columns: minmax(170px, auto) 1fr auto; gap: 10px; align-items: baseline; padding: 4px 0; }
+.opt code { font: 500 13px/1.3 var(--f-mono); }
+.opt button.mini { padding: 4px 8px; font-size: 12px; }
+.opt button.mini.in { background: var(--accent-soft); border-color: var(--accent); }
+
+/* basket */
+.basket { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: start; }
+.bgroup { display: grid; gap: 6px; }
+.bgroup h3 { font-size: 15px; }
+.bitem { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 10px; background: var(--bg); border-radius: 6px; }
+.bitem code { font: 500 13px/1.3 var(--f-mono); }
+.bitem button { padding: 4px 8px; font-size: 12px; }
+.out { display: grid; gap: 8px; min-width: 0; }
+.row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.empty { padding: 24px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+footer { font-size: 13px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .explore, .basket { grid-template-columns: 1fr; }
+  .rail { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rail-tools { grid-column: 1 / -1; }
+  .opt { grid-template-columns: 1fr auto; }
+  .opt span.why { grid-column: 1 / -1; grid-row: 2; }
+}
+/* Stack the idea table into cards whenever the page is narrow, so the options never sit off-screen */
+@media (max-width: 900px) {
+  table { min-width: 0; }
+  thead { display: none; }
+  table, tbody, tr, td { display: block; width: auto; }
+  tr.need, tr.faded { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  tr.need { border-color: var(--accent); }
+  td.c { width: auto; border-bottom: 0; padding-bottom: 4px; }
+  tr.need td.c { box-shadow: none; }
+  .divider td { border-bottom: 0; padding-inline: 0; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">drC's Onto-Explorer</span>
+    <h1>Explore the standard vocabularies before you build</h1>
+    <p class="muted">Pick a sample app or describe your own. Then browse twelve widely used vocabularies to see which terms fit your domain, where vocabularies overlap, and when to reach for a specialist. Collect the terms you like and take them into Onto20Q, available at <a href="https://codesupreme.ai/ontologies" target="_blank" rel="noopener">codesupreme.ai/ontologies</a>.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="dh">
+    <div class="row"><h2 id="dh">Your domain</h2><span class="small muted">Choose a sample, then edit it freely.</span></div>
+    <div class="domains" id="domains"></div>
+    <label for="desc" class="small muted">Application description</label>
+    <textarea id="desc"></textarea>
+    <div class="found" id="found"></div>
+  </section>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-explore" aria-selected="true" aria-controls="p-explore">Browse by vocabulary</button>
+      <button role="tab" id="tab-compare" aria-selected="false" aria-controls="p-compare">Browse by idea <span class="count" id="ncount">0</span></button>
+      <button role="tab" id="tab-basket" aria-selected="false" aria-controls="p-basket">Your basket <span class="count" id="bcount">0</span></button>
+    </div>
+
+    <div id="p-explore" role="tabpanel" aria-labelledby="tab-explore" class="explore">
+      <nav class="rail" id="rail" aria-label="Vocabularies"></nav>
+      <article class="detail" id="detail"></article>
+    </div>
+
+    <div id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <div style="display:grid;gap:14px">
+        <p class="muted">Most apps need to say the same few things: who, what organization, when, where. Each vocabulary has its own way to say them. Rows your description calls for are listed first, with a suggested term and the reason for it. You can always pick a different one.</p>
+        <div class="cmp-wrap"><table id="cmp"></table></div>
+      </div>
+    </div>
+
+    <div id="p-basket" role="tabpanel" aria-labelledby="tab-basket" hidden>
+      <div id="basketBody"></div>
+    </div>
+  </section>
+
+  <footer>Term lists are a curated starting set, not each vocabulary's full contents. Follow the specification link on each vocabulary for everything else. Matching uses keywords, not AI: it finds words, not meaning, so a term can fit even when nothing is highlighted.</footer>
+</div>
+
+<script>
+// ===================== Curated content for Onto-Explorer =====================
+// Term format: [localName, kind ("C" class | "P" property), definition, match keywords "a|b|c", Turtle example]
+// Also-consider format: [targetPrefix, "overlap" | "complement" | "stepup", note]
+
+const DOMAINS = [
+  { id: "clinic", label: "Community clinics", text:
+`Eastside Health is a network of four community clinics. Patients book appointments online or by phone with a doctor or nurse at the clinic nearest them. Each clinic is organized into departments such as pediatrics, cardiology and family medicine, and every department has a head who reports to the clinic director.
+
+At each visit, staff record the patient's vital signs: weight in kilograms, temperature in degrees Celsius, and blood pressure. Some readings arrive from home devices in pounds or Fahrenheit and have to be converted before they are compared.
+
+Because these are medical records, the clinic must know who entered or changed each record and when, and keep a full history of every change for audits.` },
+  { id: "archive", label: "Historical archive", text:
+`The Riverside Historical Society is digitizing its collection of letters, photographs, maps and newspapers from 1850 to 1950. Each item gets a title, a creator, a date, and a description written by a volunteer. Many items are part of larger collections, such as the papers of a single family.
+
+Items are tagged with subjects from the society's own thesaurus. Broader terms like Transportation contain narrower terms like Railroads and Canals, and each term lists alternative spellings so that searches find either name.
+
+Some items are in the public domain. Others are licensed from families who allow viewing and research but forbid commercial reuse, and the archive must check these rules before it allows a high-resolution download.` },
+  { id: "shop", label: "Online shop", text:
+`Hearth & Loom is a small online shop selling handmade rugs, blankets and pillows. Each product has a name, a description, photos, a price in US dollars and a size in centimeters. Products are grouped into categories such as Living Room and Bedroom, and a rug can belong to more than one category.
+
+Customers create an account, place orders and pay by card. After delivery they can leave a review with a rating from one to five stars.
+
+The shop runs seasonal offers and discounts with start and end dates. Orders ship from a warehouse in Asheville, and the site shows a delivery estimate based on the customer's address.` },
+  { id: "data", label: "Research data portal", text:
+`The Coastal Water Quality Project publishes datasets from sensors along the Gulf coast. The portal is a catalog that researchers search by keyword, by theme from a controlled list, and by the time period a dataset covers. Each dataset names a contact point and carries a license.
+
+Every dataset is available in several formats: a CSV download, a JSON API and a map service. Measurements such as dissolved oxygen in milligrams per liter and water temperature must always carry their units.
+
+Each dataset records how it was produced: which raw sensor data it was derived from, which processing script generated it, and who ran the script and when.` },
+  { id: "forum", label: "Maker community", text:
+`MakerCircle is an online community for hobbyists. Members create a user account with a profile, a link to their homepage and an avatar image, and they can follow other members whose work they like.
+
+The forum is organized into boards such as 3D Printing, Woodworking and Electronics. Each board holds threads made of posts and replies, and members tag their posts with topics so others can find them.
+
+Moderators belong to a moderators group that may lock threads and remove posts. Local maker spaces register as organizations and list their members and their projects.` },
+  { id: "events", label: "Regional events", text:
+`Front Range Events lists concerts, workshops, festivals and markets across Colorado. Each event has a start time, an end time, a venue with an address and a map location, an organizer and ticket prices.
+
+Multi-day festivals contain sessions, and sessions in the same room must not overlap. The calendar warns when a workshop is scheduled before the session it depends on, and shows the duration of each session.
+
+Visitors search for events within a region, for example inside the Denver metro boundary or within 20 miles of Boulder. Performers have a short biography and a link to their website.` },
+];
+
+const VOCABS = [
+{ p: "schema", name: "schema.org", ns: "https://schema.org/", spec: "https://schema.org/docs/schemas.html",
+  by: "Google, Microsoft, Yahoo and Yandex, with an open community", size: "Very large: about 800 types and 1,500 properties",
+  overview: "The everyday vocabulary of the web. Search engines read it to understand pages about people, businesses, products, events and creative works. It covers a little of almost everything, which makes it the usual starting point.",
+  use: "You want one broad vocabulary that most developers and search engines already know, and your needs in each area are basic.",
+  skip: "One part of your app needs precise modeling, such as an audit trail, time intervals or map geometry. Use a specialist vocabulary for that part.",
+  terms: [
+    ["Person","C","A person, living, dead or fictional.","person|people|patient|customer|member|performer|volunteer|staff|doctor|nurse","ex:ana a schema:Person ;\n  schema:name \"Ana Ruiz\" ."],
+    ["Patient","C","A person receiving medical care. A more specific kind of Person.","patient","ex:p42 a schema:Patient ."],
+    ["Organization","C","A company, school, club or other organized group.","organization|company|society|shop|network|organizer","ex:eastside a schema:Organization ;\n  schema:name \"Eastside Health\" ."],
+    ["MedicalOrganization","C","A clinic, hospital, pharmacy or other medical provider.","clinic|hospital|medical","ex:northClinic a schema:MedicalOrganization ."],
+    ["Place","C","A physical location: a venue, building, park or city.","place|venue|location|warehouse|room","ex:redRocks a schema:Place ;\n  schema:name \"Red Rocks Amphitheatre\" ."],
+    ["PostalAddress","C","A mailing address with street, city, region and postal code.","address","ex:addr1 a schema:PostalAddress ;\n  schema:addressLocality \"Asheville\" ."],
+    ["GeoCoordinates","C","A single point on the map, given as latitude and longitude.","map location|on a map|map service|coordinates|latitude|longitude","ex:pt a schema:GeoCoordinates ;\n  schema:latitude 39.66 ; schema:longitude -105.21 ."],
+    ["Event","C","Something that happens at a time and place: a concert, class or appointment.","event|appointment|concert|workshop|festival|market|session|visit","ex:jazzNight a schema:Event ;\n  schema:startDate \"2026-12-04T19:00\" ."],
+    ["Product","C","Anything offered for sale.","product|rug|blanket|pillow","ex:rug7 a schema:Product ;\n  schema:name \"Wool kilim rug\" ."],
+    ["Offer","C","An offer to sell something, with a price and the dates it is valid.","offer|discount|ticket","ex:o1 a schema:Offer ;\n  schema:price 240 ; schema:priceCurrency \"USD\" ."],
+    ["Order","C","A confirmed purchase by a customer.","order|purchase","ex:order991 a schema:Order ;\n  schema:customer ex:ana ."],
+    ["Review","C","A review of a product, place or work, often with a rating.","review|rating","ex:r1 a schema:Review ;\n  schema:reviewRating [ schema:ratingValue 5 ] ."],
+    ["CreativeWork","C","Any authored work: an article, photo, map, letter or video.","letter|photograph|photo|newspaper|article|biography","ex:letter12 a schema:CreativeWork ."],
+    ["Dataset","C","A body of structured data. Google Dataset Search reads this type.","dataset","ex:wq2025 a schema:Dataset ."],
+    ["Comment","C","A comment on a page, post or other item.","comment|reply","ex:c1 a schema:Comment ;\n  schema:text \"Great tip!\" ."],
+    ["QuantitativeValue","C","A number with a unit, such as 72 kg.","weight|size|measurement|temperature","ex:w a schema:QuantitativeValue ;\n  schema:value 72 ; schema:unitCode \"KGM\" ."],
+    ["name","P","The name of anything.","name","ex:rug7 schema:name \"Wool kilim rug\" ."],
+    ["address","P","Links a person, organization or place to its postal address.","address","ex:redRocks schema:address ex:addr1 ."],
+    ["startDate","P","When an event begins. endDate is its partner. (Offers use validFrom and validThrough.)","start|date|schedule|scheduled","ex:jazzNight schema:startDate \"2026-12-04T19:00\" ."],
+    ["location","P","Where an event happens.","venue|location","ex:jazzNight schema:location ex:redRocks ."],
+    ["worksFor","P","The organization a person works for.","staff|employee","ex:drLee schema:worksFor ex:northClinic ."],
+    ["author","P","Who wrote or made a creative work.","author|creator","ex:letter12 schema:author ex:mary ."],
+    ["price","P","The price in an offer. Pair it with priceCurrency.","price|dollars|cost","ex:o1 schema:price 240 ."],
+    ["license","P","The license that applies to a work or dataset.","license|licensed","ex:wq2025 schema:license <https://creativecommons.org/licenses/by/4.0/> ."],
+  ],
+  also: [
+    ["foaf","overlap","schema:Person and foaf:Person mean the same thing. Many graphs use both, or declare them equivalent."],
+    ["dcterms","overlap","schema:author and schema:license overlap with dcterms:creator and dcterms:license. Library and archive data usually prefers Dublin Core."],
+    ["skos","complement","schema.org has DefinedTerm and CategoryCode for simple term lists, but nothing like SKOS broader and narrower. Model a real category hierarchy in SKOS and link items to it."],
+    ["geo","stepup","schema:GeoCoordinates is a single point. Move to GeoSPARQL when you need areas, boundaries or \"within\" questions."],
+    ["qudt","stepup","schema:unitCode is just a code. QUDT knows what each unit means and how to convert between units."],
+  ] },
+
+{ p: "foaf", name: "FOAF (Friend of a Friend)", ns: "http://xmlns.com/foaf/0.1/", spec: "http://xmlns.com/foaf/spec/",
+  by: "Dan Brickley and Libby Miller, as a community project since 2000", size: "Small: about 13 classes and 60 properties",
+  overview: "One of the oldest Semantic Web vocabularies, for describing people, their online accounts, and who knows whom. Many other vocabularies, including ORG and SIOC, build on its classes.",
+  use: "Your app is about people and their social connections, or you are linking to older linked data that already uses FOAF.",
+  skip: "You need anything beyond people and simple groups. FOAF has nothing for events, products or places.",
+  terms: [
+    ["Person","C","A person.","person|people|member|performer","ex:ana a foaf:Person ;\n  foaf:name \"Ana Ruiz\" ."],
+    ["Agent","C","Anything that can act: a person, group, organization or software.","agent","ex:bot1 a foaf:Agent ."],
+    ["Organization","C","An organization such as a company or society.","organization|society","ex:makerSpace a foaf:Organization ."],
+    ["Group","C","A collection of agents, like a team or a moderators group.","group|team","ex:mods a foaf:Group ;\n  foaf:member ex:ana ."],
+    ["OnlineAccount","C","An account on a website or service.","account|login","ex:acct a foaf:OnlineAccount ;\n  foaf:accountName \"ana_makes\" ."],
+    ["Document","C","Any document, web page or file.","document|page","ex:guide a foaf:Document ."],
+    ["Image","C","An image, such as a photo or avatar.","image|avatar|photo|photograph","ex:avatar1 a foaf:Image ."],
+    ["Project","C","A project that people work on.","project","ex:cncBuild a foaf:Project ."],
+    ["name","P","A person's or thing's name.","name","ex:ana foaf:name \"Ana Ruiz\" ."],
+    ["knows","P","One person knows another. The classic social link.","follow|follows|friend|knows","ex:ana foaf:knows ex:ben ."],
+    ["member","P","Links a group to one of its members.","member|members","ex:mods foaf:member ex:ana ."],
+    ["homepage","P","A person's or organization's home page.","homepage|website","ex:ana foaf:homepage <https://ana.example> ."],
+    ["depiction","P","An image that shows the thing.","avatar|photo|picture","ex:ana foaf:depiction ex:avatar1 ."],
+    ["account","P","Links a person to an online account they hold.","account","ex:ana foaf:account ex:acct ."],
+    ["mbox","P","An email address, written as a mailto: link.","email","ex:ana foaf:mbox <mailto:ana@example.org> ."],
+    ["maker","P","The agent that made something.","creator|made|maker","ex:guide foaf:maker ex:ana ."],
+  ],
+  also: [
+    ["schema","overlap","schema:Person is the modern, widely indexed equivalent. Use schema.org for most data and FOAF when social links or older datasets matter."],
+    ["sioc","complement","SIOC builds on FOAF: a foaf:Person holds a sioc:UserAccount that writes posts. Use them together for forums."],
+    ["org","stepup","foaf:Organization has no departments or roles. Move to ORG when you need structure inside an organization."],
+    ["prov","complement","foaf:Agent and prov:Agent line up well, so the people in FOAF can be the ones responsible for changes in PROV-O."],
+  ] },
+
+{ p: "org", name: "W3C Organization Ontology (ORG)", ns: "http://www.w3.org/ns/org#", spec: "https://www.w3.org/TR/vocab-org/",
+  by: "W3C (Recommendation, 2014)", size: "Small: about 10 classes and 35 properties",
+  overview: "Describes the inside of an organization: its units and sub-organizations, the sites it operates, the posts people hold, and who reports to whom. Governments use it for official organization charts.",
+  use: "Departments, roles, memberships or reporting lines matter to your app.",
+  skip: "You only need an organization's name and address. schema:Organization is enough for that.",
+  terms: [
+    ["Organization","C","Any organization. The base class for the others here.","organization|network","ex:eastside a org:Organization ."],
+    ["FormalOrganization","C","An organization recognized in law, such as a company or charity.","company|society|registered","ex:eastside a org:FormalOrganization ."],
+    ["OrganizationalUnit","C","A department or unit that exists only as part of a larger organization.","department|departments|division","ex:pediatrics a org:OrganizationalUnit ."],
+    ["Site","C","An office, building or other location the organization operates.","site|clinic|warehouse|office","ex:northSite a org:Site ."],
+    ["Post","C","A position that someone can hold, such as Head of Cardiology.","post|position|head|director","ex:headCardio a org:Post ."],
+    ["Membership","C","A person's membership in an organization, with a role and dates.","membership","ex:m1 a org:Membership ;\n  org:member ex:drLee ; org:organization ex:eastside ."],
+    ["Role","C","The kind of role a member has, such as moderator or treasurer.","role|moderator|moderators","ex:moderator a org:Role ."],
+    ["hasUnit","P","Links an organization to one of its departments.","department|departments","ex:northClinic org:hasUnit ex:pediatrics ."],
+    ["subOrganizationOf","P","This organization is part of a larger one.","part|network","ex:northClinic org:subOrganizationOf ex:eastside ."],
+    ["reportsTo","P","A person or post reports to another.","reports","ex:headCardio org:reportsTo ex:clinicDirector ."],
+    ["headOf","P","A person leads an organization or unit.","head|director|leads","ex:drLee org:headOf ex:pediatrics ."],
+    ["memberOf","P","A person is a member of an organization.","member|members","ex:ana org:memberOf ex:makerSpace ."],
+    ["hasSite","P","An organization operates at a site.","site|location","ex:eastside org:hasSite ex:northSite ."],
+    ["holds","P","A person holds a post.","holds","ex:drLee org:holds ex:headCardio ."],
+  ],
+  also: [
+    ["foaf","complement","ORG uses foaf:Person for the people who hold posts and memberships. You will usually import both."],
+    ["schema","overlap","schema:Organization, schema:department and schema:worksFor cover the basics. ORG is the step up when structure matters."],
+    ["time","complement","Memberships change over time. org:memberDuring takes an OWL-Time interval for each membership."],
+  ] },
+
+{ p: "skos", name: "SKOS (Simple Knowledge Organization System)", ns: "http://www.w3.org/2004/02/skos/core#", spec: "https://www.w3.org/TR/skos-reference/",
+  by: "W3C (Recommendation, 2009)", size: "Small: 4 classes and about 30 properties",
+  overview: "The standard way to publish a thesaurus, taxonomy, tag list or classification. Concepts have preferred and alternative labels, broader and narrower links, and mappings to concepts in other schemes. Libraries, governments and the EU publish their subject lists in SKOS.",
+  use: "Anything in your app is sorted into categories, topics, tags or a controlled list of terms.",
+  skip: "You need strict logical rules, such as \"every Railroad is a Transportation system\". SKOS broader/narrower is a loose link, not formal subclassing.",
+  terms: [
+    ["Concept","C","One idea in a scheme: a category, tag, subject or theme.","category|categories|subject|tag|topic|theme|term","ex:railroads a skos:Concept ;\n  skos:prefLabel \"Railroads\"@en ."],
+    ["ConceptScheme","C","A whole thesaurus, taxonomy or code list.","thesaurus|taxonomy|scheme|list","ex:riversideSubjects a skos:ConceptScheme ."],
+    ["Collection","C","A labeled group of concepts, like a facet in a search screen.","collection|group","ex:transportFacet a skos:Collection ."],
+    ["prefLabel","P","The preferred name of a concept. One per language.","name|label","ex:railroads skos:prefLabel \"Railroads\"@en ."],
+    ["altLabel","P","An alternative name: a synonym, spelling or abbreviation.","alternative|synonym|spelling|spellings","ex:railroads skos:altLabel \"Railways\"@en ."],
+    ["broader","P","Links a concept to a more general one.","broader|parent","ex:railroads skos:broader ex:transportation ."],
+    ["narrower","P","Links a concept to a more specific one.","narrower|child","ex:transportation skos:narrower ex:canals ."],
+    ["related","P","Two concepts are associated, but neither is broader.","related|associated","ex:railroads skos:related ex:steamEngines ."],
+    ["inScheme","P","The scheme a concept belongs to.","scheme|thesaurus","ex:railroads skos:inScheme ex:riversideSubjects ."],
+    ["hasTopConcept","P","A top-level concept of a scheme.","top","ex:riversideSubjects skos:hasTopConcept ex:transportation ."],
+    ["definition","P","A plain-language definition of the concept.","definition|description","ex:canals skos:definition \"Artificial waterways for boats.\"@en ."],
+    ["exactMatch","P","Says your concept is the same as one in another scheme.","match|mapping","ex:railroads skos:exactMatch <https://vocab.example.org/subjects/railways> ."],
+  ],
+  also: [
+    ["dcterms","complement","Items point to SKOS concepts with dcterms:subject. This pairing is how most archives tag their records."],
+    ["dcat","complement","DCAT uses SKOS for dataset themes: dcat:theme points to a skos:Concept."],
+    ["schema","complement","schema.org items can point to SKOS concepts with schema:about, so you keep one category list for the whole app."],
+  ] },
+
+{ p: "dcterms", name: "Dublin Core Terms", ns: "http://purl.org/dc/terms/", spec: "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/",
+  by: "Dublin Core Metadata Initiative (DCMI), since 1995", size: "Medium: about 55 properties and 22 classes",
+  overview: "The classic metadata vocabulary for documents and media: title, creator, date, subject, rights. Nearly every library, archive and repository system reads it, and other vocabularies such as DCAT borrow its terms.",
+  use: "Your app describes documents, files, images or records, especially if the data will be shared with libraries or repositories.",
+  skip: "You need to describe what the item is about in depth. Dublin Core describes the item itself, not people, events or places.",
+  terms: [
+    ["BibliographicResource","C","A book, article, letter or other citable resource.","book|article|letter|newspaper","ex:letter12 a dcterms:BibliographicResource ."],
+    ["Agent","C","Anyone who can create, publish or hold rights to a resource: a person, family or organization.","family|families|publisher","ex:hollisFamily a dcterms:Agent ."],
+    ["title","P","The name given to the resource.","title|name","ex:letter12 dcterms:title \"Letter to Martha, 1863\" ."],
+    ["creator","P","Who made the resource.","creator|author|photographer","ex:letter12 dcterms:creator ex:mary ."],
+    ["contributor","P","Someone who contributed but is not the main creator.","contributor|volunteer","ex:letter12 dcterms:contributor ex:volunteer8 ."],
+    ["date","P","A date associated with the resource.","date|year","ex:letter12 dcterms:date \"1863-04-02\" ."],
+    ["created","P","When the resource was created.","created","ex:photo3 dcterms:created \"1910\" ."],
+    ["modified","P","When the resource was last changed.","modified|changed|updated","ex:record9 dcterms:modified \"2026-11-01\" ."],
+    ["description","P","A free-text account of the resource.","description","ex:letter12 dcterms:description \"Describes the spring flood.\" ."],
+    ["subject","P","The topic of the resource, ideally a SKOS concept.","subject|subjects|topic|tag","ex:letter12 dcterms:subject ex:canals ."],
+    ["identifier","P","An ID that identifies the resource, like an accession number.","identifier|id|number","ex:letter12 dcterms:identifier \"RHS-1863-012\" ."],
+    ["isPartOf","P","The larger resource or collection this belongs to.","part|collection|collections|papers","ex:letter12 dcterms:isPartOf ex:hollisPapers ."],
+    ["license","P","A legal document giving permission to use the resource.","license|licensed","ex:photo3 dcterms:license <https://creativecommons.org/publicdomain/mark/1.0/> ."],
+    ["rights","P","A rights statement. Formally a RightsStatement resource; plain text is a common shortcut.","rights|copyright|domain","ex:letter12 dcterms:rights \"Viewing and research only.\" ."],
+    ["format","P","The file format or physical medium.","format|formats|csv|json","ex:scan12 dcterms:format <https://www.iana.org/assignments/media-types/image/tiff> ."],
+    ["temporal","P","The time period the resource covers. Formally a PeriodOfTime resource; a plain range string is a common shortcut.","period|coverage|covers","ex:hollisPapers dcterms:temporal \"1850/1950\" ."],
+  ],
+  also: [
+    ["skos","complement","Point dcterms:subject at SKOS concepts instead of plain text, so tags have labels, synonyms and a hierarchy."],
+    ["prov","stepup","dcterms:creator and dcterms:modified record only the latest facts. PROV-O keeps the full history of who changed what."],
+    ["odrl","stepup","dcterms:rights is text for people to read. ODRL turns rights into rules a system can check."],
+    ["schema","overlap","schema.org has similar properties (name, author, dateCreated). Choose one family for each kind of fact and stay consistent."],
+  ] },
+
+{ p: "prov", name: "PROV-O (Provenance Ontology)", ns: "http://www.w3.org/ns/prov#", spec: "https://www.w3.org/TR/prov-o/",
+  by: "W3C (Recommendation, 2013)", size: "Medium: about 30 classes and 50 properties",
+  overview: "Records where things came from. It has three core ideas: Entities (data, documents, records), Activities (things that happened to them) and Agents (who was responsible). With these you can answer \"who changed this, from what, and when?\"",
+  use: "You need an audit trail, data lineage, or trust in where information came from.",
+  skip: "You only need a created-by and a date. dcterms:creator and dcterms:created are simpler.",
+  terms: [
+    ["Entity","C","A thing whose history you track: a record, file, dataset or reading.","record|records|dataset|file|reading|readings","ex:record9 a prov:Entity ."],
+    ["Activity","C","Something that happened over time and used or produced entities.","activity|process|processing|change|entered|visit","ex:edit77 a prov:Activity ."],
+    ["Agent","C","Who or what bears responsibility: a person, organization or software.","agent|staff","ex:nurseKim a prov:Agent ."],
+    ["Person","C","A person in the role of an agent: someone responsible for an entity or activity.","person|nurse|doctor","ex:nurseKim a prov:Person ."],
+    ["Organization","C","An organization in the role of an agent.","organization|clinic","ex:northClinic a prov:Organization ."],
+    ["SoftwareAgent","C","A program that acts, such as a processing script.","script|software|program","ex:cleanScript a prov:SoftwareAgent ."],
+    ["wasGeneratedBy","P","The activity that produced this entity.","generated|produced","ex:wq2025 prov:wasGeneratedBy ex:run12 ."],
+    ["wasDerivedFrom","P","The entity this one was made from.","derived|source","ex:wq2025 prov:wasDerivedFrom ex:rawSensorFeed ."],
+    ["wasAttributedTo","P","The agent responsible for this entity.","entered|responsible","ex:record9 prov:wasAttributedTo ex:nurseKim ."],
+    ["wasAssociatedWith","P","An agent took part in an activity.","ran","ex:run12 prov:wasAssociatedWith ex:drOkafor ."],
+    ["used","P","An activity used an entity as input.","used|input","ex:run12 prov:used ex:rawSensorFeed ."],
+    ["startedAtTime","P","When an activity started. endedAtTime is its partner.","when|time","ex:edit77 prov:startedAtTime \"2026-11-02T09:14:00Z\"^^xsd:dateTime ."],
+    ["wasRevisionOf","P","This entity is a revised version of an earlier one.","revision|changed|history|version","ex:record9v2 prov:wasRevisionOf ex:record9 ."],
+    ["actedOnBehalfOf","P","An agent acted for another, like a nurse for a clinic.","behalf","ex:nurseKim prov:actedOnBehalfOf ex:northClinic ."],
+  ],
+  also: [
+    ["dcterms","overlap","dcterms:creator and dcterms:created are the lightweight version. Many apps use Dublin Core on the record and PROV-O for its history."],
+    ["foaf","complement","The agents in PROV-O are often described with foaf:Person or schema:Person, so you know who they are as well as what they did."],
+    ["time","complement","PROV-O gives activities start and end instants. Add OWL-Time if you must reason about how activities overlap."],
+  ] },
+
+{ p: "time", name: "OWL-Time", ns: "http://www.w3.org/2006/time#", spec: "https://www.w3.org/TR/owl-time/",
+  by: "W3C and OGC (Recommendation 2017; a 2022 update is in draft)", size: "Medium: about 20 classes and 60 properties",
+  overview: "Models time itself: instants, intervals and durations, and the relations between intervals, such as before, meets, overlaps and during. These are Allen's interval relations, a standard idea from AI research on reasoning about time.",
+  use: "Your app must reason about time: check overlaps, durations, or that one thing happened before another.",
+  skip: "You only store dates and times. Plain xsd:dateTime values on schema:startDate are much simpler.",
+  terms: [
+    ["Instant","C","A single point in time.","instant|moment","ex:doorsOpen a time:Instant ;\n  time:inXSDDateTimeStamp \"2026-07-04T18:00:00-06:00\"^^xsd:dateTimeStamp ."],
+    ["Interval","C","A stretch of time with a beginning and an end.","interval|period|session|sessions","ex:sessionA a time:Interval ."],
+    ["ProperInterval","C","An interval whose beginning and end are different.","interval","ex:sessionA a time:ProperInterval ."],
+    ["Duration","C","An amount of time, such as 90 minutes, with no fixed start.","duration|minutes|hours","ex:d90 a time:Duration ;\n  time:numericDuration 90 ; time:unitType time:unitMinute ."],
+    ["hasBeginning","P","The instant an interval begins.","start|begins","ex:sessionA time:hasBeginning ex:doorsOpen ."],
+    ["hasEnd","P","The instant an interval ends.","end|ends","ex:sessionA time:hasEnd ex:sessionAEnd ."],
+    ["inXSDDateTimeStamp","P","The calendar date and time of an instant, with time zone.","date|time|timestamp","ex:doorsOpen time:inXSDDateTimeStamp \"2026-07-04T18:00:00-06:00\"^^xsd:dateTimeStamp ."],
+    ["hasDuration","P","Links an interval to its duration.","duration","ex:sessionA time:hasDuration ex:d90 ."],
+    ["before","P","This happens entirely before that.","before|prerequisite|depends","ex:introSession time:before ex:advancedWorkshop ."],
+    ["intervalDisjoint","P","The two intervals share no time at all. Use it for rules like \"sessions in one room must not overlap\".","overlap|conflict|clash","ex:sessionA time:intervalDisjoint ex:sessionB ."],
+    ["intervalOverlaps","P","Allen's \"overlaps\": this interval starts first and ends partway through the other. It does not cover one interval inside another.","overlaps|overlapping","ex:sessionA time:intervalOverlaps ex:sessionB ."],
+    ["intervalDuring","P","This interval lies entirely inside another.","during","ex:sessionA time:intervalDuring ex:festivalWeekend ."],
+    ["intervalMeets","P","This interval ends exactly when the next begins.","meets|back-to-back","ex:sessionA time:intervalMeets ex:sessionB ."],
+  ],
+  also: [
+    ["schema","overlap","schema:startDate and schema:endDate cover simple scheduling. OWL-Time is the step up when your rules compare intervals."],
+    ["prov","complement","PROV-O records when activities happened. OWL-Time lets you reason about those periods."],
+    ["org","complement","ORG uses OWL-Time intervals for when a membership was held (org:memberDuring)."],
+  ] },
+
+{ p: "geo", name: "GeoSPARQL", ns: "http://www.opengis.net/ont/geosparql#", spec: "https://www.ogc.org/standard/geosparql/",
+  by: "Open Geospatial Consortium (OGC); version 1.1 in 2024", size: "Small core: about 6 classes and 50+ properties, plus spatial query functions",
+  overview: "Brings real geometry to linked data. Features (things on the map) have Geometries (points, lines, polygons written in WKT), and spatial relations such as within, contains and intersects can be stated or computed in SPARQL queries.",
+  use: "Your app works with areas and boundaries, or asks spatial questions like \"which of these are inside this region?\" or \"what's within 20 miles?\"",
+  skip: "You only show an address or a pin on a map. schema:GeoCoordinates is enough.",
+  terms: [
+    ["Feature","C","A thing that exists on the map: a venue, river, county or sensor site.","feature|site|region|area|venue|county","ex:denverMetro a geo:Feature ."],
+    ["Geometry","C","A shape: a point, line or polygon.","geometry|shape|boundary|polygon","ex:denverMetroShape a geo:Geometry ."],
+    ["SpatialObject","C","The parent of Feature and Geometry; anything with a spatial extent.","spatial","ex:x a geo:SpatialObject ."],
+    ["hasGeometry","P","Links a feature to its shape.","geometry|shape","ex:denverMetro geo:hasGeometry ex:denverMetroShape ."],
+    ["asWKT","P","The shape written as Well-Known Text, such as POINT(-105.2 40.0).","map|location|coordinates|point","ex:boulderPt geo:asWKT \"POINT(-105.27 40.01)\"^^geo:wktLiteral ."],
+    ["sfWithin","P","This feature lies inside another.","within|inside","ex:redRocks geo:sfWithin ex:denverMetro ."],
+    ["sfContains","P","This feature contains another.","contains|contain","ex:denverMetro geo:sfContains ex:redRocks ."],
+    ["sfIntersects","P","The two shapes touch or overlap in any way.","intersects|overlaps|crosses","ex:floodZone geo:sfIntersects ex:canalRoute ."],
+    ["sfTouches","P","The shapes share a border but do not overlap.","touches|borders|adjacent","ex:countyA geo:sfTouches ex:countyB ."],
+  ],
+  also: [
+    ["schema","overlap","schema:Place and schema:GeoCoordinates are fine for a pin on a map. Keep schema.org for the place's name and address, and add GeoSPARQL for its shape."],
+    ["dcat","complement","DCAT describes a dataset's spatial coverage with dcterms:spatial, which can point to a GeoSPARQL feature."],
+    ["qudt","complement","Distances like \"20 miles\" need units. QUDT supplies them when you store a search radius."],
+  ] },
+
+{ p: "dcat", name: "DCAT (Data Catalog Vocabulary)", ns: "http://www.w3.org/ns/dcat#", spec: "https://www.w3.org/TR/vocab-dcat-3/",
+  by: "W3C (Recommendation; version 3 in 2024)", size: "Medium: about 10 classes and 40 properties, reusing Dublin Core",
+  overview: "Describes catalogs of datasets: what each dataset is, the forms it can be downloaded or accessed in, and the services that serve it. National open-data portals such as data.gov and data.europa.eu use it.",
+  use: "Your app publishes or lists datasets that other people will search for, download or call through an API.",
+  skip: "You are describing the data inside a dataset. DCAT describes the dataset as a package, not its rows.",
+  terms: [
+    ["Catalog","C","A curated collection of dataset descriptions, such as a data portal.","catalog|portal","ex:coastalPortal a dcat:Catalog ."],
+    ["Dataset","C","One collection of data, published by one agent.","dataset|datasets","ex:wq2025 a dcat:Dataset ."],
+    ["Distribution","C","One available form of a dataset, such as a CSV file.","download|format|formats|csv|file","ex:wq2025csv a dcat:Distribution ;\n  dcat:mediaType <https://www.iana.org/assignments/media-types/text/csv> ."],
+    ["DataService","C","An API or service that gives access to data.","api|service","ex:wqApi a dcat:DataService ;\n  dcat:endpointURL <https://api.example.org/wq> ."],
+    ["dataset","P","Links a catalog to a dataset it lists.","catalog","ex:coastalPortal dcat:dataset ex:wq2025 ."],
+    ["distribution","P","Links a dataset to one of its forms.","format|formats","ex:wq2025 dcat:distribution ex:wq2025csv ."],
+    ["downloadURL","P","Where to download a distribution directly.","download","ex:wq2025csv dcat:downloadURL <https://data.example.org/wq2025.csv> ."],
+    ["accessURL","P","A page or service through which the data can be reached.","access|api","ex:wq2025json dcat:accessURL <https://api.example.org/wq> ."],
+    ["keyword","P","A free-text keyword for search.","keyword|keywords","ex:wq2025 dcat:keyword \"dissolved oxygen\" ."],
+    ["theme","P","The main category of a dataset, as a SKOS concept.","theme|category","ex:wq2025 dcat:theme ex:waterQuality ."],
+    ["contactPoint","P","Who to contact about the dataset.","contact","ex:wq2025 dcat:contactPoint ex:dataDesk ."],
+    ["servesDataset","P","Links a data service to the dataset it serves.","service|serves","ex:wqApi dcat:servesDataset ex:wq2025 ."],
+  ],
+  also: [
+    ["dcterms","complement","DCAT reuses Dublin Core for title, description, license, publisher and temporal coverage. Import both."],
+    ["skos","complement","dcat:theme expects a SKOS concept, so your controlled list of themes belongs in SKOS."],
+    ["prov","complement","DCAT says what a dataset is. PROV-O says how it was produced. Data portals that care about trust use both."],
+    ["schema","overlap","schema:Dataset is what Google Dataset Search reads. Many portals publish DCAT and add schema.org for search engines."],
+  ] },
+
+{ p: "odrl", name: "ODRL (Open Digital Rights Language)", ns: "http://www.w3.org/ns/odrl/2/", spec: "https://www.w3.org/TR/odrl-vocab/",
+  by: "W3C (Recommendation, 2018)", size: "Medium: about 30 classes and a library of 70 actions",
+  overview: "Turns rights and usage rules into data a system can check. A Policy holds Permissions, Prohibitions and Duties: who may do which action on which asset, under what constraints.",
+  use: "Your app must enforce rules about use: who may download, share, modify or reuse something, and under what conditions.",
+  skip: "A license link or a rights sentence is enough. dcterms:license and dcterms:rights are much simpler.",
+  terms: [
+    ["Policy","C","A set of rules about using an asset.","policy|rules|rule","ex:hollisTerms a odrl:Policy ."],
+    ["Set","C","A policy that just states rules, with no specific parties.","rules","ex:hollisTerms a odrl:Set ."],
+    ["Agreement","C","A policy agreed between a specific assigner and assignee.","agreement|licensed","ex:deal1 a odrl:Agreement ."],
+    ["Permission","C","Something an assignee may do.","allow|allows|permission","ex:perm1 a odrl:Permission ;\n  odrl:action odrl:read ."],
+    ["Prohibition","C","Something an assignee must not do.","forbid|forbids|prohibit","ex:noCommercial a odrl:Prohibition ;\n  odrl:action odrl:commercialize ."],
+    ["Duty","C","Something that must be done, such as giving attribution.","duty|require|required|obligation","ex:attribute a odrl:Duty ;\n  odrl:action odrl:attribute ."],
+    ["Constraint","C","A condition that limits a rule, such as a purpose or date.","constraint|condition|conditions","ex:researchOnly a odrl:Constraint ;\n  odrl:leftOperand odrl:purpose ; odrl:operator odrl:eq ; odrl:rightOperand \"research\" ."],
+    ["permission","P","Links a policy to a permission.","allow|permission","ex:hollisTerms odrl:permission ex:perm1 ."],
+    ["prohibition","P","Links a policy to a prohibition.","forbid|prohibition","ex:hollisTerms odrl:prohibition ex:noCommercial ."],
+    ["target","P","The asset a rule applies to.","item|items|asset|download","ex:perm1 odrl:target ex:letter12 ."],
+    ["assignee","P","Who the rule applies to.","researcher|researchers","ex:perm1 odrl:assignee ex:registeredResearchers ."],
+    ["action","P","The action allowed, forbidden or required: read, distribute, modify...","download|reuse|share|lock|remove","ex:perm1 odrl:action odrl:reproduce ."],
+  ],
+  also: [
+    ["dcterms","overlap","dcterms:license and dcterms:rights are for people to read. Use ODRL when software must make the decision."],
+    ["schema","overlap","schema:license points to a license. ODRL spells out what that license actually permits."],
+    ["foaf","complement","Assignees are agents: describe them with foaf:Group or schema:Organization so rules can name who they cover."],
+  ] },
+
+{ p: "qudt", name: "QUDT (Quantities, Units, Dimensions and Types)", ns: "http://qudt.org/schema/qudt/", spec: "https://qudt.org/",
+  by: "QUDT.org, a non-profit, originally from NASA work", size: "Very large: thousands of units and quantity kinds",
+  overview: "Gives units of measure real meaning. Each unit, such as kilogram, pound or degree Fahrenheit, belongs to a quantity kind, such as mass or temperature, and carries the numbers needed to convert it. Units live in the unit: namespace (http://qudt.org/vocab/unit/).",
+  use: "Your app stores measured amounts, especially when values arrive in different units or must be checked against limits.",
+  skip: "You only display a number with a unit label. schema:QuantitativeValue with a unit code is enough.",
+  terms: [
+    ["QuantityValue","C","A number together with its unit.","measurement|reading|readings|value","ex:w1 a qudt:QuantityValue ;\n  qudt:numericValue 72.5 ; qudt:unit unit:KiloGM ."],
+    ["Quantity","C","A measured property of something, such as a patient's weight on a given day.","weight|temperature|pressure|oxygen|quantity","ex:visitWeight a qudt:Quantity ."],
+    ["Unit","C","A unit of measure, such as unit:KiloGM, unit:LB or unit:DEG_C.","unit|units|kilograms|pounds|celsius|fahrenheit|centimeters|miles|milligrams","unit:DEG_C a qudt:Unit ."],
+    ["QuantityKind","C","The kind of thing being measured: mass, length, temperature.","kind|mass|length","quantitykind:Mass a qudt:QuantityKind ."],
+    ["numericValue","P","The number part of a value.","value|number","ex:w1 qudt:numericValue 72.5 ."],
+    ["unit","P","The unit a value is expressed in.","unit|units|kilograms|pounds|celsius|fahrenheit|centimeters|milligrams","ex:w1 qudt:unit unit:KiloGM ."],
+    ["hasQuantityKind","P","The quantity kind a unit or quantity belongs to.","kind","unit:LB qudt:hasQuantityKind quantitykind:Mass ."],
+    ["conversionMultiplier","P","Multiply by this to convert the unit to its standard (SI) unit.","convert|converted|conversion","unit:LB qudt:conversionMultiplier 0.45359237 ."],
+    ["conversionOffset","P","Added to the value before applying conversionMultiplier. Needed for temperature scales.","convert|converted|fahrenheit","unit:DEG_F qudt:conversionOffset 459.67 ."],
+  ],
+  also: [
+    ["schema","overlap","schema:QuantitativeValue with schema:unitCode handles display. Use QUDT when you must compare or convert values."],
+    ["prov","complement","Measurements often need provenance: which device or person took the reading, and when."],
+    ["dcat","complement","Datasets of measurements describe their variables. Pointing to QUDT units makes the units unambiguous for others."],
+  ] },
+
+{ p: "sioc", name: "SIOC (Semantically-Interlinked Online Communities)", ns: "http://rdfs.org/sioc/ns#", spec: "http://rdfs.org/sioc/spec/",
+  by: "DERI Galway and community (W3C Member Submission, 2007)", size: "Small: about 12 classes and 80 properties",
+  overview: "Describes online community content: sites, forums, threads, posts, replies and the user accounts that write them. It separates a person (FOAF) from the accounts they use (SIOC).",
+  use: "Your app has discussions, comments, posts or threads.",
+  skip: "You only have one kind of simple comment. schema:Comment is enough.",
+  terms: [
+    ["Site","C","The whole community website.","site|community|website","ex:makerCircle a sioc:Site ."],
+    ["Forum","C","A discussion area, such as a board or channel.","forum|board|boards|channel","ex:woodworking a sioc:Forum ;\n  sioc:has_host ex:makerCircle ."],
+    ["Thread","C","A series of posts on one subject.","thread|threads|discussion","ex:t881 a sioc:Thread ;\n  sioc:has_parent ex:woodworking ."],
+    ["Post","C","One message written by a user.","post|posts|message|comment","ex:post5 a sioc:Post ;\n  sioc:content \"Try a sharper blade.\" ."],
+    ["UserAccount","C","An account a person uses on the site. Not the person themselves.","account|profile|user","ex:ana_makes a sioc:UserAccount ."],
+    ["Usergroup","C","A set of accounts with shared permissions, such as moderators.","group|moderators","ex:moderators a sioc:Usergroup ."],
+    ["Role","C","A role an account has in a forum or site.","role|moderator","ex:modRole a sioc:Role ."],
+    ["has_creator","P","The account that wrote a post.","author|creator|wrote","ex:post5 sioc:has_creator ex:ana_makes ."],
+    ["has_container","P","The forum or thread a post belongs to.","board|thread","ex:post5 sioc:has_container ex:t881 ."],
+    ["reply_of","P","The post this one replies to. has_reply goes the other way.","reply|replies","ex:post6 sioc:reply_of ex:post5 ."],
+    ["content","P","The text of a post.","text|content","ex:post5 sioc:content \"Try a sharper blade.\" ."],
+    ["topic","P","A topic of a post, often a SKOS concept.","topic|topics|tag","ex:post5 sioc:topic ex:handTools ."],
+    ["member_of","P","An account belongs to a user group.","member|belong|belongs","ex:ana_makes sioc:member_of ex:moderators ."],
+  ],
+  also: [
+    ["foaf","complement","SIOC accounts belong to people: link them with foaf:account (person to account) or sioc:account_of (account to person)."],
+    ["skos","complement","Tags and topics on posts work best as SKOS concepts, so moderators can merge synonyms."],
+    ["odrl","stepup","sioc:Usergroup says who is in a group. ODRL can express what that group may do, such as lock threads or remove posts."],
+    ["schema","overlap","schema:DiscussionForumPosting and schema:Comment are what search engines read. Many forums publish both."],
+  ] },
+];
+
+// Same idea, different vocabularies. [concept, plain question, [[prefixed term, note], ...]]
+const CONCEPTS = [
+  ["Person", "Who is this person?", [
+    ["schema:Person","The web default. Rich set of properties; read by search engines."],
+    ["foaf:Person","Older and smaller. Best for social links (foaf:knows)."],
+    ["prov:Person","A person in the role of being responsible for something."],
+    ["sioc:UserAccount","Not the person: the account they use on a site."],
+    ["dcterms:Agent","Whoever created or published a resource; no detail beyond that."]]],
+  ["Organization", "What is this organization, and how is it structured?", [
+    ["schema:Organization","Name, address, contacts. Basic structure only."],
+    ["foaf:Organization","Just says it is an organization."],
+    ["org:FormalOrganization","Legally recognized; has units, sites and posts."],
+    ["org:OrganizationalUnit","A department inside an organization."],
+    ["prov:Organization","An organization in the role of a responsible agent."]]],
+  ["Who made it", "Who created or wrote this?", [
+    ["schema:author","Author of a creative work."],
+    ["dcterms:creator","The library and archive standard."],
+    ["foaf:maker","Any agent that made a thing."],
+    ["prov:wasAttributedTo","Responsibility, as part of a full history."],
+    ["sioc:has_creator","The account that wrote a post."]]],
+  ["When", "When did it happen?", [
+    ["schema:startDate","A plain date and time."],
+    ["dcterms:created","When a resource was created."],
+    ["prov:startedAtTime","When an activity in a history began."],
+    ["time:hasBeginning","An instant you can reason with (before, overlaps)."]]],
+  ["Where", "Where is it?", [
+    ["schema:address","A mailing address."],
+    ["schema:GeoCoordinates","One point on a map."],
+    ["org:Site","A location an organization operates."],
+    ["geo:hasGeometry","A real shape you can test for within or contains."]]],
+  ["Category or topic", "What is it about, and how is it classified?", [
+    ["skos:Concept","The category itself, with labels and a hierarchy."],
+    ["dcterms:subject","Points a document to its topic."],
+    ["dcat:theme","Points a dataset to its main theme."],
+    ["sioc:topic","Points a post to its topic."]]],
+  ["Measurement", "How much, in what unit?", [
+    ["schema:QuantitativeValue","Value plus a unit code. Fine for display."],
+    ["qudt:QuantityValue","Value plus a unit that knows how to convert."]]],
+  ["Usage rights", "What may people do with it?", [
+    ["dcterms:license","Link to a license."],
+    ["dcterms:rights","A rights statement for people to read."],
+    ["schema:license","Link to a license, read by search engines."],
+    ["odrl:Policy","Rules that software can check."]]],
+  ["Dataset", "How is a dataset described and found?", [
+    ["schema:Dataset","For Google Dataset Search."],
+    ["dcat:Dataset","For data portals: distributions, services, themes."]]],
+  ["Post or comment", "Who said what, where?", [
+    ["schema:Comment","A simple comment."],
+    ["sioc:Post","A post in a forum or thread, with replies."]]],
+];
+
+// How each concept row reacts to the description.
+// triggers: extra words that mean the app needs this concept (term keywords from the row also count).
+// rules: first match wins -> [keywords, suggested term, reason]; fallback: [term, reason] when nothing more specific is said.
+const CONCEPT_RULES = {
+  "Person": { triggers: "person|people|patient|patients|customer|customers|member|members|staff|doctor|nurse|volunteer|performer|researcher",
+    rules: [["follow|follows|friend|friends|knows", "foaf:Person", "people follow or know each other, and FOAF's social links fit that"]],
+    fallback: ["schema:Person", "you mainly need names and details, and schema.org is the most widely supported"] },
+  "Organization": { triggers: "organization|organizations|company|clinic|clinics|society|shop|network|department|departments|maker spaces",
+    rules: [["department|departments|reports to|director|division", "org:FormalOrganization", "you describe departments or reporting lines, which only ORG models"]],
+    fallback: ["schema:Organization", "a name and address is all you describe"] },
+  "Who made it": { triggers: "creator|author|wrote|written|made|entered|created|posts|produced|generated",
+    rules: [["history|audit|audits|derived|script|generated|who ran|changed", "prov:wasAttributedTo", "you need to know who was responsible as part of a history of changes"],
+            ["post|posts|thread|threads|forum|replies", "sioc:has_creator", "people write posts in a forum"],
+            ["letter|letters|archive|collection|collections|newspaper|newspapers|photographs|library", "dcterms:creator", "archives and libraries expect Dublin Core"]],
+    fallback: ["schema:author", "a simple author link is enough"] },
+  "When": { triggers: "date|dates|time|times|start|end|when|scheduled|period|appointment|appointments|history",
+    rules: [["overlap|overlaps|duration|depends on|prerequisite|scheduled before", "time:hasBeginning", "your rules compare time periods, which needs OWL-Time"],
+            ["history|changed|audit|audits|derived|ran", "prov:startedAtTime", "the times belong to a history of activities"],
+            ["digitizing|digitized|created|letters|photographs", "dcterms:created", "you record when documents were created"]],
+    fallback: ["schema:startDate", "plain dates and times are enough"] },
+  "Where": { triggers: "address|addresses|location|venue|venues|region|warehouse|site|sites|clinic|clinics|miles|coast",
+    rules: [["region|regions|boundary|boundaries|within|inside|miles|area|areas", "geo:hasGeometry", "you ask whether things are inside an area or within a distance"],
+            ["map location|on a map|map service|coordinates|latitude|longitude", "schema:GeoCoordinates", "you show places as points on a map"],
+            ["sites|offices|branches", "org:Site", "the places are sites an organization operates"]],
+    fallback: ["schema:address", "a mailing address is all you describe"] },
+  "Category or topic": { triggers: "category|categories|subject|subjects|tag|tags|tagged|topic|topics|theme|thesaurus|board|boards",
+    rules: [["broader|narrower|thesaurus|hierarchy|synonym|synonyms|alternative spellings|spellings", "skos:Concept", "your categories form a hierarchy with alternative names, which is exactly what SKOS is for"],
+            ["dataset|datasets|portal", "dcat:theme", "you classify datasets by theme"],
+            ["post|posts|thread|threads", "sioc:topic", "people tag posts with topics"],
+            ["letter|letters|item|items|document|documents", "dcterms:subject", "you tag documents with subjects"]],
+    fallback: ["skos:Concept", "keep one list of categories in SKOS and link everything to it"] },
+  "Measurement": { triggers: "weight|temperature|pressure|size|measurement|measurements|kilograms|pounds|celsius|fahrenheit|centimeters|milligrams|liter|miles",
+    rules: [["convert|converted|conversion|pounds|fahrenheit|units must|must always carry", "qudt:QuantityValue", "values arrive in different units or must carry units precisely"]],
+    fallback: ["schema:QuantitativeValue", "you only display a number with its unit"] },
+  "Usage rights": { triggers: "license|licensed|licenses|rights|copyright|public domain|forbid|allow|permission|lock|remove|reuse",
+    rules: [["forbid|forbids|allow|allows|check|rules|permission|lock|remove", "odrl:Policy", "the system must check what people may do, not just display a license"],
+            ["license|licensed", "dcterms:license", "a link to a license is enough"]],
+    fallback: ["dcterms:rights", "a rights statement for people to read is enough"] },
+  "Dataset": { triggers: "dataset|datasets|data portal|data catalog",
+    rules: [["portal|catalog|download|api|formats|format", "dcat:Dataset", "you publish datasets in several formats through a portal"]],
+    fallback: ["schema:Dataset", "you mainly want search engines to find the dataset"] },
+  "Post or comment": { triggers: "comment|comments|post|posts|reply|replies|review|reviews|thread|threads|forum",
+    rules: [["thread|threads|replies|forum|board|boards", "sioc:Post", "posts live in threads and boards with replies"]],
+    fallback: ["schema:Comment", "simple comments or reviews are all you describe"] },
+};
+
+</script>
+<script>
+// ---------------- state ----------------
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const VBY = Object.fromEntries(VOCABS.map(v => [v.p, v]));
+const KIND = { overlap: "Overlaps", complement: "Works alongside", stepup: "Step up to" };
+const state = {
+  domain: store.get("vx.domain", "clinic"),
+  text: store.get("vx.text", null),
+  vocab: store.get("vx.vocab", "schema"),
+  tab: "explore",
+  sortByHits: store.get("vx.sort", true),
+  onlyHits: false,
+  basket: new Set(store.get("vx.basket", [])),
+};
+if (state.text == null) state.text = DOMAINS.find(d => d.id === state.domain)?.text || DOMAINS[0].text;
+
+// ---------------- matching ----------------
+const norm = s => " " + s.toLowerCase().replace(/[^a-z0-9°]+/g, " ").trim() + " ";
+function matcher(text) {
+  const t = norm(text);
+  return kws => {
+    for (const raw of kws.split("|")) {
+      const k = norm(raw).trim();
+      if (!k) continue;
+      for (const v of [k, k + "s", k + "es", k.replace(/y$/, "ies")]) if (t.includes(" " + v + " ")) return raw;
+    }
+    return null;
+  };
+}
+function analyze() {
+  const m = matcher(state.text);
+  const hits = {}; // prefix -> {count, words:Set, terms:{name: word}}
+  for (const v of VOCABS) {
+    const h = { count: 0, words: new Set(), terms: {} };
+    for (const [name, , , kws] of v.terms) { const w = m(kws); if (w) { h.count++; h.words.add(w); h.terms[name] = w; } }
+    hits[v.p] = h;
+  }
+  return hits;
+}
+
+// ---------------- helpers ----------------
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === "class") e.className = v; else if (k.startsWith("on")) e[k] = v; else e.setAttribute(k, v); }
+  for (const k of kids) if (k != null) e.append(k); return e; };
+const termInfo = id => { const [p, n] = id.split(":"); const v = VBY[p]; const t = v && v.terms.find(x => x[0] === n); return { p, n, v, t }; };
+function toggleBasket(id) { state.basket.has(id) ? state.basket.delete(id) : state.basket.add(id); store.set("vx.basket", [...state.basket]); render(); }
+
+// ---------------- render: domain ----------------
+function renderDomains() {
+  const box = $("domains"); box.replaceChildren();
+  for (const d of DOMAINS) box.append(el("button", { type: "button", "aria-pressed": String(d.id === state.domain),
+    onclick: () => { state.domain = d.id; state.text = d.text; $("desc").value = d.text; store.set("vx.domain", d.id); store.set("vx.text", d.text); render(); } }, d.label));
+  box.append(el("button", { type: "button", "aria-pressed": String(state.domain === "own"),
+    onclick: () => { state.domain = "own"; state.text = ""; $("desc").value = ""; $("desc").focus(); store.set("vx.domain", "own"); store.set("vx.text", ""); render(); } }, "Write my own"));
+}
+function renderFound(hits) {
+  const all = new Set(); for (const h of Object.values(hits)) h.words.forEach(w => all.add(w));
+  const f = $("found"); f.replaceChildren();
+  if (!all.size) { f.append(el("span", { class: "small muted" }, state.text.trim() ? "No vocabulary keywords found yet. Try naming the people, things and activities in your app." : "Describe your app to see which vocabulary terms its words point to.")); return; }
+  f.append(el("span", { class: "small muted" }, `Words that point to vocabulary terms (${all.size}):`));
+  for (const w of [...all].sort()) f.append(el("span", { class: "hitword" }, w));
+}
+
+// ---------------- render: explorer ----------------
+function renderRail(hits) {
+  const r = $("rail"); r.replaceChildren();
+  const box = el("input", { type: "checkbox", id: "sortHits" }); box.checked = state.sortByHits;
+  box.onchange = () => { state.sortByHits = box.checked; store.set("vx.sort", box.checked); render(); };
+  r.append(el("div", { class: "rail-tools" }, el("span", {}, "12 vocabularies"), el("label", { for: "sortHits" }, box, "Most matches first")));
+  const list = [...VOCABS];
+  if (state.sortByHits) list.sort((a, b) => hits[b.p].count - hits[a.p].count);
+  for (const v of list) {
+    const n = hits[v.p].count;
+    r.append(el("button", { type: "button", class: "vbtn" + (n ? "" : " zero"), "aria-current": String(v.p === state.vocab),
+      title: n ? `${n} term${n > 1 ? "s" : ""} match words in your description` : "No keyword matches",
+      onclick: () => { state.vocab = v.p; state.onlyHits = false; store.set("vx.vocab", v.p); render(); if (matchMedia("(max-width: 760px)").matches) $("detail").scrollIntoView({ block: "start" }); } },
+      el("span", { class: "pfx" }, v.p + ":"), el("span", { class: "nm" }, v.name.replace(/ \(.*\)$/, "")), el("span", { class: "n" + (n ? " on" : "") }, String(n))));
+  }
+}
+function renderDetail(hits) {
+  const v = VBY[state.vocab] || VOCABS[0], h = hits[v.p];
+  const d = $("detail"); d.replaceChildren();
+  d.append(el("div", { class: "vhead" }, el("span", { class: "eyebrow" }, v.p + ":"), el("h2", {}, v.name), el("p", {}, v.overview)));
+  d.append(el("dl", { class: "facts" },
+    el("dt", {}, "Namespace"), el("dd", { class: "mono small" }, v.ns),
+    el("dt", {}, "Maintained by"), el("dd", {}, v.by),
+    el("dt", {}, "Size"), el("dd", {}, v.size),
+    el("dt", {}, "Specification"), el("dd", {}, el("a", { href: v.spec, target: "_blank", rel: "noopener" }, v.spec.replace(/^https?:\/\//, "")))));
+  d.append(el("div", { class: "fit" }, el("div", {}, el("b", {}, "Use it when"), v.use), el("div", {}, el("b", {}, "Skip it when"), v.skip)));
+
+  // terms
+  const only = el("input", { type: "checkbox", id: "onlyHits" }); only.checked = state.onlyHits; only.disabled = !h.count;
+  only.onchange = () => { state.onlyHits = only.checked; render(); };
+  d.append(el("div", { class: "terms-head" },
+    el("h3", {}, `Terms you can use `, el("span", { class: "muted small" }, `· ${v.terms.length} shown${h.count ? `, ${h.count} match your description` : ""}`)),
+    el("label", { for: "onlyHits" }, only, "Matches only")));
+  const box = el("div", { class: "terms" });
+  for (const [name, kind, def, , ex] of v.terms) {
+    const word = h.terms[name];
+    if (state.onlyHits && !word) continue;
+    const id = `${v.p}:${name}`, inB = state.basket.has(id);
+    const nameRow = el("div", { class: "term-name" }, el("code", {}, id), el("span", { class: "kind" }, kind === "C" ? "Class" : "Property"),
+      word ? el("span", { class: "hitword" }, `matches “${word}”`) : null);
+    box.append(el("div", { class: "term" + (word ? " hit" : "") }, nameRow,
+      el("button", { type: "button", class: "add" + (inB ? " in" : ""), "aria-pressed": String(inB), onclick: () => toggleBasket(id) }, inB ? "✓ In basket" : "+ Add"),
+      el("p", {}, def),
+      el("details", {}, el("summary", {}, "Example"), el("pre", {}, ex))));
+  }
+  d.append(box);
+
+  // also consider
+  d.append(el("div", { class: "row" }, el("h3", {}, "Also consider"),
+    el("span", { class: "legend" }, el("span", { class: "tag overlap" }, KIND.overlap), el("span", { class: "tag complement" }, KIND.complement), el("span", { class: "tag stepup" }, KIND.stepup))));
+  const also = el("div", { class: "also" });
+  for (const [to, kind, note] of v.also) {
+    const tv = VBY[to], n = hits[to]?.count || 0;
+    also.append(el("div", { class: "note" }, el("span", { class: "tag " + kind }, KIND[kind]), el("span", {}, note),
+      el("button", { type: "button", class: "go", onclick: () => { state.vocab = to; state.onlyHits = false; store.set("vx.vocab", to); render(); $("detail").scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); } },
+        `Open ${tv.name.replace(/ \(.*\)$/, "")}${n ? ` · ${n} match${n > 1 ? "es" : ""}` : ""} →`)));
+  }
+  d.append(also);
+}
+
+// ---------------- render: compare ----------------
+// For each idea: does the description call for it, and which option fits best?
+function assessConcepts() {
+  const m = matcher(state.text);
+  return CONCEPTS.map(([concept, q, opts]) => {
+    const r = CONCEPT_RULES[concept] || { triggers: "", rules: [], fallback: [opts[0][0], ""] };
+    const words = new Set();
+    for (const raw of r.triggers.split("|")) { const w = m(raw); if (w) words.add(w); }
+    for (const [id] of opts) { const t = termInfo(id).t; if (t) { const w = m(t[3]); if (w) words.add(w); } }
+    let pick = null;
+    if (words.size) {
+      for (const [kws, id, why] of r.rules) { const w = m(kws); if (w) { pick = { id, why, word: w }; break; } }
+      pick ??= { id: r.fallback[0], why: r.fallback[1], word: null };
+    }
+    return { concept, q, opts, words: [...words].sort(), pick };
+  });
+}
+function renderCompare() {
+  const rows = assessConcepts();
+  const needed = rows.filter(r => r.words.length), other = rows.filter(r => !r.words.length);
+  $("ncount").textContent = needed.length;
+  const t = $("cmp"); t.replaceChildren();
+  t.append(el("thead", {}, el("tr", {}, el("th", {}, "Idea"), el("th", {}, "Ways to say it, across vocabularies"))));
+  const tb = el("tbody");
+  const row = r => {
+    const cell = el("td");
+    if (r.pick) {
+      const s = el("div", { class: "suggest" }, "Suggested: ", el("b", {}, r.pick.id), ", because ", r.pick.why,
+        r.pick.word ? ` (your text says “${r.pick.word}”).` : ".");
+      cell.append(s);
+    }
+    for (const [id, why] of r.opts) {
+      const { p, t: term } = termInfo(id);
+      const inB = state.basket.has(id), isPick = r.pick && r.pick.id === id;
+      cell.append(el("div", { class: "opt" + (isPick ? " pick" : "") },
+        el("code", {}, id, isPick ? el("span", { class: "pickbadge" }, "Suggested") : null),
+        el("span", { class: "why small" }, why),
+        term ? el("button", { type: "button", class: "mini" + (inB ? " in" : ""), "aria-pressed": String(inB), onclick: () => toggleBasket(id) }, inB ? "✓" : "+ Add")
+             : el("button", { type: "button", class: "mini", onclick: () => { state.vocab = p; switchTab("explore"); render(); } }, "Open")));
+    }
+    const head = el("td", { class: "c" }, el("strong", {}, r.concept), el("span", {}, r.q));
+    if (r.words.length) {
+      const w = el("span", { class: "need-why" }, "Your description needs this: ");
+      for (const x of r.words.slice(0, 5)) w.append(el("span", { class: "hitword" }, x));
+      head.append(w);
+    }
+    return el("tr", { class: r.words.length ? "need" : "faded" }, head, cell);
+  };
+  if (needed.length) { tb.append(el("tr", { class: "divider" }, el("td", { colspan: "2" }, `Your app needs to say these (${needed.length})`))); needed.forEach(r => tb.append(row(r))); }
+  if (other.length) { tb.append(el("tr", { class: "divider" }, el("td", { colspan: "2" }, `Nothing in your description points here (${other.length})`))); other.forEach(r => tb.append(row(r))); }
+  t.append(tb);
+}
+
+// ---------------- render: basket ----------------
+function buildTurtle(ids) {
+  const groups = {};
+  for (const id of ids) { const i = termInfo(id); if (i.t) (groups[i.p] ??= []).push(i); }
+  const used = VOCABS.filter(v => groups[v.p]);
+  const lines = ["@prefix ex: <https://example.org/myapp#> .", "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> ."];
+  for (const v of used) lines.push(`@prefix ${v.p}: <${v.ns}> .`);
+  lines.push("", "# Starter skeleton: one sample instance per class you chose.", "# Replace ex: names and values with your own data.");
+  for (const v of used) for (const i of groups[v.p].filter(i => i.t[1] === "C")) {
+    const local = "sample" + i.n.replace(/^[a-z]/, c => c.toUpperCase()).replace(/_/g, "");
+    lines.push(`ex:${local} a ${i.p}:${i.n} ;`, `    rdfs:label "Sample ${i.n}" .`);
+  }
+  const props = used.flatMap(v => groups[v.p].filter(i => i.t[1] === "P"));
+  if (props.length) {
+    lines.push("", "# Properties you chose (use them to link your instances):");
+    for (const i of props) lines.push(`#   ${i.p}:${i.n}  ${i.t[2]}`);
+  }
+  return lines.join("\n");
+}
+function buildExport(ids) {
+  const vocabs = [...new Set(ids.map(id => id.split(":")[0]))].filter(p => VBY[p]);
+  return JSON.stringify({
+    format: "onto20q-basket", version: 1,
+    domain: state.domain, description: state.text,
+    vocabularies: vocabs.map(p => ({ prefix: p, namespace: VBY[p].ns, name: VBY[p].name })),
+    terms: ids.map(id => { const i = termInfo(id); return i.t ? { id, kind: i.t[1] === "C" ? "class" : "property", definition: i.t[2] } : null; }).filter(Boolean),
+  }, null, 2);
+}
+async function copyFrom(btn, pre) {
+  const label = btn.textContent;
+  try { await navigator.clipboard.writeText(pre.textContent); btn.textContent = "Copied"; }
+  catch { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected, press Ctrl+C"; }
+  setTimeout(() => btn.textContent = label, 2000);
+}
+function renderBasket() {
+  const ids = [...state.basket].filter(id => termInfo(id).t);
+  $("bcount").textContent = ids.length;
+  const b = $("basketBody"); b.replaceChildren();
+  if (!ids.length) {
+    b.append(el("div", { class: "empty" }, el("p", { style: "margin:0 auto" }, "Your basket is empty. Use “+ Add” on any term in Vocabularies or Compare concepts. Your picks become a Turtle starter file and an export for Onto20Q.")));
+    return;
+  }
+  const left = el("div", { style: "display:grid;gap:14px" });
+  left.append(el("div", { class: "row" }, el("h3", {}, `${ids.length} term${ids.length > 1 ? "s" : ""} from ${new Set(ids.map(i => i.split(":")[0])).size} vocabularies`),
+    el("button", { type: "button", onclick: () => { state.basket.clear(); store.set("vx.basket", []); render(); } }, "Clear basket")));
+  for (const v of VOCABS) {
+    const mine = ids.filter(id => id.startsWith(v.p + ":"));
+    if (!mine.length) continue;
+    const g = el("div", { class: "bgroup" }, el("h3", {}, v.name));
+    for (const id of mine) g.append(el("div", { class: "bitem" }, el("code", {}, id), el("button", { type: "button", onclick: () => toggleBasket(id) }, "Remove")));
+    left.append(g);
+  }
+  const ttl = el("pre", {}, buildTurtle(ids)), json = el("pre", {}, buildExport(ids));
+  const c1 = el("button", { type: "button", class: "primary", onclick: () => copyFrom(c1, ttl) }, "Copy Turtle");
+  const c2 = el("button", { type: "button", onclick: () => copyFrom(c2, json) }, "Copy export");
+  const right = el("div", { class: "out" },
+    el("div", { class: "row" }, el("h3", {}, "Turtle starter"), c1), ttl,
+    el("div", { class: "row", style: "margin-top:10px" }, el("h3", {}, "Export for Onto20Q"), c2),
+    el("p", { class: "small muted" }, "Paste this into Onto20Q to start from your picks. Onto20Q will ask about the gaps and build the full ontology. Afterwards, compare its choices with yours."),
+    el("details", {}, el("summary", { class: "small muted", style: "cursor:pointer" }, "Show export"), json));
+  b.append(el("div", { class: "basket" }, left, right));
+}
+
+// ---------------- tabs & main render ----------------
+function switchTab(name) {
+  state.tab = name;
+  for (const t of ["explore", "compare", "basket"]) { $("tab-" + t).setAttribute("aria-selected", String(t === name)); $("p-" + t).hidden = t !== name; }
+}
+for (const t of ["explore", "compare", "basket"]) $("tab-" + t).onclick = () => { switchTab(t); render(); };
+function render() {
+  const hits = analyze();
+  renderDomains(); renderFound(hits); renderRail(hits); renderDetail(hits); renderCompare(hits); renderBasket();
+}
+let typing;
+$("desc").value = state.text;
+$("desc").addEventListener("input", e => { state.text = e.target.value; clearTimeout(typing);
+  typing = setTimeout(() => { store.set("vx.text", state.text); const hits = analyze(); renderFound(hits); renderRail(hits); renderDetail(hits); renderCompare(hits); }, 250); });
+render();
+</script>
