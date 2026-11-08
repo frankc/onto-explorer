@@ -237,6 +237,24 @@ Moderators belong to a moderators group that may lock threads and remove posts. 
 Multi-day festivals contain sessions, and sessions in the same room must not overlap. The calendar warns when a workshop is scheduled before the session it depends on, and shows the duration of each session.
 
 Visitors search for events within a region, for example inside the Denver metro boundary or within 20 miles of Boulder. Performers have a short biography and a link to their website.` },
+  { id: "pokemon", label: "Pokémon card trading", text:
+`PokéSwap is an app where Pokémon card collectors track their collections and trade cards with each other. Each collector has a profile with their name and a nickname, and can follow other collectors, one-way, as on social media.
+
+The app keeps a card separate from a copy of it. A card is a printed design in a set, such as Base Set Charizard 4/102. It has a set with a release date, a card number, the Pokémon it shows, its HP, an energy type such as Fire or Water, and a rarity: Common, Uncommon, Rare or Holo Rare. Newer rarities, such as Double Rare and Special Illustration Rare, count as kinds of Holo Rare. Each physical copy a collector owns has its own condition, from Near Mint to Damaged. A copy may be graded by a company such as PSA, CGC or BGS with a grade from 1 to 10, may be a 1st edition, and has an estimated value in US dollars. Each copy has exactly one owner at a time.
+
+Collectors offer trades to each other. A trade lists the copies the offering collector gives and the copies they ask for in return, the date it was offered, and its status: open, completed or declined. A collector can only offer copies they own, and when a trade is completed, ownership of the copies changes hands.` },
+  { id: "chips", label: "Chip design & foundry", text:
+`Northlake Semiconductor designs mixed-signal chips and has them manufactured by foundry partners. Each chip design is a project run by a design team in one of the company's divisions, led by an engineer who reports to a program director, and targets a process node such as 5 nm or 22 nm. A design reuses licensed IP blocks, such as a processor core or a data converter. Each block comes with a license that limits which products may use it and forbids sharing its source outside the company, and some designs are subject to export rules.
+
+Every release of a design is a new version derived from the one before, and the team must record who signed off each version and when. A tape-out sends a version to the foundry, where it is built on wafers, in lots, at a fabrication site. Each step has a planned date, and the schedule flags any step that starts before the step it depends on has finished.
+
+When wafers come back, test engineers measure each die: supply voltage in volts, clock speed in megahertz, power in milliwatts and temperature in degrees Celsius. Yield and test results are published as datasets for the design team and the foundry, as CSV files and through an API, and every result records which test program and which wafer lot produced it.` },
+  { id: "muse", label: "Personal AI muse", text:
+`Muse is a personal AI companion that helps a writer, musician or artist capture ideas and turn them into finished work. The owner saves notes, voice memos, sketches, photos and quotes whenever inspiration strikes, and the AI suggests links between them. Each item is tagged with topics from the owner's own idea map, where broader themes like Memory contain narrower ones like Childhood and Places, and each topic can have alternative names.
+
+The AI drafts new ideas, outlines and lyrics from the owner's notes. Every draft records which notes it was derived from, whether the owner or the AI wrote it, and every revision after that, so the owner can always see where an idea came from. Saved articles, books and songs keep their title, author and date.
+
+Everything is private to the owner by default. The owner can share a project with collaborators, such as a co-writer or an editor, and choose whether each may only read it or also comment and edit. Nothing may be used to train other AI models without the owner's permission.` },
 ];
 
 const VOCABS = [
@@ -246,7 +264,7 @@ const VOCABS = [
   use: "You want one broad vocabulary that most developers and search engines already know, and your needs in each area are basic.",
   skip: "One part of your app needs precise modeling, such as an audit trail, time intervals or map geometry. Use a specialist vocabulary for that part.",
   terms: [
-    ["Person","C","A person, living, dead or fictional.","person|people|patient|customer|member|performer|volunteer|staff|doctor|nurse","ex:ana a schema:Person ;\n  schema:name \"Ana Ruiz\" ."],
+    ["Person","C","A person, living, dead or fictional.","person|people|patient|customer|member|performer|volunteer|staff|doctor|nurse|collector|engineer|writer|musician|artist|collaborator|editor","ex:ana a schema:Person ;\n  schema:name \"Ana Ruiz\" ."],
     ["Patient","C","A person receiving medical care. A more specific kind of Person.","patient","ex:p42 a schema:Patient ."],
     ["Organization","C","A company, school, club or other organized group.","organization|company|society|shop|network|organizer","ex:eastside a schema:Organization ;\n  schema:name \"Eastside Health\" ."],
     ["MedicalOrganization","C","A clinic, hospital, pharmacy or other medical provider.","clinic|hospital|medical","ex:northClinic a schema:MedicalOrganization ."],
@@ -254,7 +272,8 @@ const VOCABS = [
     ["PostalAddress","C","A mailing address with street, city, region and postal code.","address","ex:addr1 a schema:PostalAddress ;\n  schema:addressLocality \"Asheville\" ."],
     ["GeoCoordinates","C","A single point on the map, given as latitude and longitude.","map location|on a map|map service|coordinates|latitude|longitude","ex:pt a schema:GeoCoordinates ;\n  schema:latitude 39.66 ; schema:longitude -105.21 ."],
     ["Event","C","Something that happens at a time and place: a concert, class or appointment.","event|appointment|concert|workshop|festival|market|session|visit","ex:jazzNight a schema:Event ;\n  schema:startDate \"2026-12-04T19:00\" ."],
-    ["Product","C","Anything offered for sale.","product|rug|blanket|pillow","ex:rug7 a schema:Product ;\n  schema:name \"Wool kilim rug\" ."],
+    ["Product","C","Anything offered for sale.","product|products|rug|blanket|pillow|card|chip|chips","ex:rug7 a schema:Product ;\n  schema:name \"Wool kilim rug\" ."],
+    ["IndividualProduct","C","One specific, identifiable item, such as a laptop with a particular serial number or one physical copy of a card.","copy|copies|serial","ex:copy7 a schema:IndividualProduct ;\n  schema:name \"Base Set Charizard, copy 7\" ."],
     ["Offer","C","An offer to sell something, with a price and the dates it is valid.","offer|discount|ticket","ex:o1 a schema:Offer ;\n  schema:price 240 ; schema:priceCurrency \"USD\" ."],
     ["Order","C","A confirmed purchase by a customer.","order|purchase","ex:order991 a schema:Order ;\n  schema:customer ex:ana ."],
     ["Review","C","A review of a product, place or work, often with a rating.","review|rating","ex:r1 a schema:Review ;\n  schema:reviewRating [ schema:ratingValue 5 ] ."],
@@ -285,7 +304,7 @@ const VOCABS = [
   use: "Your app is about people and their social connections, or you are linking to older linked data that already uses FOAF.",
   skip: "You need anything beyond people and simple groups. FOAF has nothing for events, products or places.",
   terms: [
-    ["Person","C","A person.","person|people|member|performer","ex:ana a foaf:Person ;\n  foaf:name \"Ana Ruiz\" ."],
+    ["Person","C","A person.","person|people|member|performer|collector|collaborator","ex:ana a foaf:Person ;\n  foaf:name \"Ana Ruiz\" ."],
     ["Agent","C","Anything that can act: a person, group, organization or software.","agent","ex:bot1 a foaf:Agent ."],
     ["Organization","C","An organization such as a company or society.","organization|society","ex:makerSpace a foaf:Organization ."],
     ["Group","C","A collection of agents, like a team or a moderators group.","group|team","ex:mods a foaf:Group ;\n  foaf:member ex:ana ."],
@@ -317,7 +336,7 @@ const VOCABS = [
   terms: [
     ["Organization","C","Any organization. The base class for the others here.","organization|network","ex:eastside a org:Organization ."],
     ["FormalOrganization","C","An organization recognized in law, such as a company or charity.","company|society|registered","ex:eastside a org:FormalOrganization ."],
-    ["OrganizationalUnit","C","A department or unit that exists only as part of a larger organization.","department|departments|division","ex:pediatrics a org:OrganizationalUnit ."],
+    ["OrganizationalUnit","C","A department or unit that exists only as part of a larger organization.","department|departments|division|divisions","ex:pediatrics a org:OrganizationalUnit ."],
     ["Site","C","An office, building or other location the organization operates.","site|clinic|warehouse|office","ex:northSite a org:Site ."],
     ["Post","C","A position that someone can hold, such as Head of Cardiology.","post|position|head|director","ex:headCardio a org:Post ."],
     ["Membership","C","A person's membership in an organization, with a role and dates.","membership","ex:m1 a org:Membership ;\n  org:member ex:drLee ; org:organization ex:eastside ."],
@@ -342,12 +361,12 @@ const VOCABS = [
   use: "Anything in your app is sorted into categories, topics, tags or a controlled list of terms.",
   skip: "You need strict logical rules, such as \"every Railroad is a Transportation system\". SKOS broader/narrower is a loose link, not formal subclassing.",
   terms: [
-    ["Concept","C","One idea in a scheme: a category, tag, subject or theme.","category|categories|subject|tag|topic|theme|term","ex:railroads a skos:Concept ;\n  skos:prefLabel \"Railroads\"@en ."],
+    ["Concept","C","One idea in a scheme: a category, tag, subject or theme.","category|categories|subjects|tag|topic|theme|term","ex:railroads a skos:Concept ;\n  skos:prefLabel \"Railroads\"@en ."],
     ["ConceptScheme","C","A whole thesaurus, taxonomy or code list.","thesaurus|taxonomy|scheme|list","ex:riversideSubjects a skos:ConceptScheme ."],
     ["Collection","C","A labeled group of concepts, like a facet in a search screen.","collection|group","ex:transportFacet a skos:Collection ."],
     ["prefLabel","P","The preferred name of a concept. One per language.","name|label","ex:railroads skos:prefLabel \"Railroads\"@en ."],
     ["altLabel","P","An alternative name: a synonym, spelling or abbreviation.","alternative|synonym|spelling|spellings","ex:railroads skos:altLabel \"Railways\"@en ."],
-    ["broader","P","Links a concept to a more general one.","broader|parent","ex:railroads skos:broader ex:transportation ."],
+    ["broader","P","Links a concept to a more general one.","broader|parent|kinds of|kind of","ex:railroads skos:broader ex:transportation ."],
     ["narrower","P","Links a concept to a more specific one.","narrower|child","ex:transportation skos:narrower ex:canals ."],
     ["related","P","Two concepts are associated, but neither is broader.","related|associated","ex:railroads skos:related ex:steamEngines ."],
     ["inScheme","P","The scheme a concept belongs to.","scheme|thesaurus","ex:railroads skos:inScheme ex:riversideSubjects ."],
@@ -376,7 +395,7 @@ const VOCABS = [
     ["created","P","When the resource was created.","created","ex:photo3 dcterms:created \"1910\" ."],
     ["modified","P","When the resource was last changed.","modified|changed|updated","ex:record9 dcterms:modified \"2026-11-01\" ."],
     ["description","P","A free-text account of the resource.","description","ex:letter12 dcterms:description \"Describes the spring flood.\" ."],
-    ["subject","P","The topic of the resource, ideally a SKOS concept.","subject|subjects|topic|tag","ex:letter12 dcterms:subject ex:canals ."],
+    ["subject","P","The topic of the resource, ideally a SKOS concept.","subjects|topic|topics|tag|tagged","ex:letter12 dcterms:subject ex:canals ."],
     ["identifier","P","An ID that identifies the resource, like an accession number.","identifier|id|number","ex:letter12 dcterms:identifier \"RHS-1863-012\" ."],
     ["isPartOf","P","The larger resource or collection this belongs to.","part|collection|collections|papers","ex:letter12 dcterms:isPartOf ex:hollisPapers ."],
     ["license","P","A legal document giving permission to use the resource.","license|licensed","ex:photo3 dcterms:license <https://creativecommons.org/publicdomain/mark/1.0/> ."],
@@ -525,7 +544,7 @@ const VOCABS = [
   terms: [
     ["QuantityValue","C","A number together with its unit.","measurement|reading|readings|value","ex:w1 a qudt:QuantityValue ;\n  qudt:numericValue 72.5 ; qudt:unit unit:KiloGM ."],
     ["Quantity","C","A measured property of something, such as a patient's weight on a given day.","weight|temperature|pressure|oxygen|quantity","ex:visitWeight a qudt:Quantity ."],
-    ["Unit","C","A unit of measure, such as unit:KiloGM, unit:LB or unit:DEG_C.","unit|units|kilograms|pounds|celsius|fahrenheit|centimeters|miles|milligrams","unit:DEG_C a qudt:Unit ."],
+    ["Unit","C","A unit of measure, such as unit:KiloGM, unit:LB or unit:DEG_C.","unit|units|kilograms|pounds|celsius|fahrenheit|centimeters|miles|milligrams|volts|megahertz|milliwatts|nanometers|nm","unit:DEG_C a qudt:Unit ."],
     ["QuantityKind","C","The kind of thing being measured: mass, length, temperature.","kind|mass|length","quantitykind:Mass a qudt:QuantityKind ."],
     ["numericValue","P","The number part of a value.","value|number","ex:w1 qudt:numericValue 72.5 ."],
     ["unit","P","The unit a value is expressed in.","unit|units|kilograms|pounds|celsius|fahrenheit|centimeters|milligrams","ex:w1 qudt:unit unit:KiloGM ."],
@@ -622,14 +641,14 @@ const CONCEPTS = [
 // triggers: extra words that mean the app needs this concept (term keywords from the row also count).
 // rules: first match wins -> [keywords, suggested term, reason]; fallback: [term, reason] when nothing more specific is said.
 const CONCEPT_RULES = {
-  "Person": { triggers: "person|people|patient|patients|customer|customers|member|members|staff|doctor|nurse|volunteer|performer|researcher",
+  "Person": { triggers: "person|people|patient|patients|customer|customers|member|members|staff|doctor|nurse|volunteer|performer|researcher|collector|collectors|engineer|engineers|owner|collaborator|collaborators",
     rules: [["follow|follows|friend|friends|knows", "foaf:Person", "people follow or know each other, and FOAF's social links fit that"]],
     fallback: ["schema:Person", "you mainly need names and details, and schema.org is the most widely supported"] },
-  "Organization": { triggers: "organization|organizations|company|clinic|clinics|society|shop|network|department|departments|maker spaces",
-    rules: [["department|departments|reports to|director|division", "org:FormalOrganization", "you describe departments or reporting lines, which only ORG models"]],
+  "Organization": { triggers: "organization|organizations|company|clinic|clinics|society|shop|network|department|departments|maker spaces|division|divisions|foundry|team",
+    rules: [["department|departments|reports to|director|division|divisions", "org:FormalOrganization", "you describe departments or reporting lines, which only ORG models"]],
     fallback: ["schema:Organization", "a name and address is all you describe"] },
   "Who made it": { triggers: "creator|author|wrote|written|made|entered|created|posts|produced|generated",
-    rules: [["history|audit|audits|derived|script|generated|who ran|changed", "prov:wasAttributedTo", "you need to know who was responsible as part of a history of changes"],
+    rules: [["history|audit|audits|derived|script|generated|who ran|changed|signed off|wrote it", "prov:wasAttributedTo", "you need to know who was responsible as part of a history of changes"],
             ["post|posts|thread|threads|forum|replies", "sioc:has_creator", "people write posts in a forum"],
             ["letter|letters|archive|collection|collections|newspaper|newspapers|photographs|library", "dcterms:creator", "archives and libraries expect Dublin Core"]],
     fallback: ["schema:author", "a simple author link is enough"] },
@@ -638,22 +657,23 @@ const CONCEPT_RULES = {
             ["history|changed|audit|audits|derived|ran", "prov:startedAtTime", "the times belong to a history of activities"],
             ["digitizing|digitized|created|letters|photographs", "dcterms:created", "you record when documents were created"]],
     fallback: ["schema:startDate", "plain dates and times are enough"] },
-  "Where": { triggers: "address|addresses|location|venue|venues|region|warehouse|site|sites|clinic|clinics|miles|coast",
+  "Where": { triggers: "address|addresses|location|venue|venues|region|warehouse|site|sites|clinic|clinics|miles|coast|fabrication site",
     rules: [["region|regions|boundary|boundaries|within|inside|miles|area|areas", "geo:hasGeometry", "you ask whether things are inside an area or within a distance"],
             ["map location|on a map|map service|coordinates|latitude|longitude", "schema:GeoCoordinates", "you show places as points on a map"],
-            ["sites|offices|branches", "org:Site", "the places are sites an organization operates"]],
+            ["fabrication site|sites|offices|branches", "org:Site", "the places are sites an organization operates"]],
     fallback: ["schema:address", "a mailing address is all you describe"] },
-  "Category or topic": { triggers: "category|categories|subject|subjects|tag|tags|tagged|topic|topics|theme|thesaurus|board|boards",
-    rules: [["broader|narrower|thesaurus|hierarchy|synonym|synonyms|alternative spellings|spellings", "skos:Concept", "your categories form a hierarchy with alternative names, which is exactly what SKOS is for"],
+  "Category or topic": { triggers: "category|categories|subjects|tag|tags|tagged|topic|topics|theme|themes|thesaurus|board|boards|rarity|rarities|condition",
+    rules: [["broader|narrower|thesaurus|hierarchy|synonym|synonyms|alternative spellings|spellings|alternative names|kinds of", "skos:Concept", "your categories form a hierarchy with alternative names, which is exactly what SKOS is for"],
             ["dataset|datasets|portal", "dcat:theme", "you classify datasets by theme"],
             ["post|posts|thread|threads", "sioc:topic", "people tag posts with topics"],
             ["letter|letters|item|items|document|documents", "dcterms:subject", "you tag documents with subjects"]],
     fallback: ["skos:Concept", "keep one list of categories in SKOS and link everything to it"] },
-  "Measurement": { triggers: "weight|temperature|pressure|size|measurement|measurements|kilograms|pounds|celsius|fahrenheit|centimeters|milligrams|liter|miles",
-    rules: [["convert|converted|conversion|pounds|fahrenheit|units must|must always carry", "qudt:QuantityValue", "values arrive in different units or must carry units precisely"]],
+  "Measurement": { triggers: "weight|temperature|pressure|size|measurement|measurements|kilograms|pounds|celsius|fahrenheit|centimeters|milligrams|liter|miles|volts|megahertz|milliwatts|measure",
+    rules: [["convert|converted|conversion|pounds|fahrenheit|units must|must always carry", "qudt:QuantityValue", "values arrive in different units or must carry units precisely"],
+            ["volts|megahertz|milliwatts|test engineers", "qudt:QuantityValue", "engineering measurements need units that software can check and compare"]],
     fallback: ["schema:QuantitativeValue", "you only display a number with its unit"] },
-  "Usage rights": { triggers: "license|licensed|licenses|rights|copyright|public domain|forbid|allow|permission|lock|remove|reuse",
-    rules: [["forbid|forbids|allow|allows|check|rules|permission|lock|remove", "odrl:Policy", "the system must check what people may do, not just display a license"],
+  "Usage rights": { triggers: "license|licensed|licenses|rights|copyright|public domain|forbid|forbids|allow|permission|lock|remove|reuse|private|share|export rules",
+    rules: [["forbid|forbids|allow|allows|check|rules|permission|lock|remove|only read|export rules", "odrl:Policy", "the system must check what people may do, not just display a license"],
             ["license|licensed", "dcterms:license", "a link to a license is enough"]],
     fallback: ["dcterms:rights", "a rights statement for people to read is enough"] },
   "Dataset": { triggers: "dataset|datasets|data portal|data catalog",
